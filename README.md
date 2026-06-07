@@ -550,7 +550,7 @@ Se activa automáticamente cada 1 minuto sin necesidad de intervención.
 ```
 Trigger Interval: Minutes
 Minutes Between Triggers: 1
-
+```
 ![alt text](images/nodo-schedule-trigger.png)
 
 ```
@@ -561,8 +561,9 @@ Lee todos los pedidos de la hoja PEDIDOS sin filtros para revisarlos todos.
 ```
 Operation: Get Rows
 Sheet: PEDIDOS
+```
 
-images/nodo-obtener-pedidos-monitor-estados.png
+![alt text](images/nodo-obtener-pedidos-monitor-estados.png)
 
 ```
 
@@ -573,10 +574,12 @@ Filtra solo los pedidos que están en estados intermedios — ni Recibido ni Ent
 const activos = pedidos.filter(p => 
   p.json.ESTADO !== 'Entregado' && p.json.ESTADO !== 'Recibido'
 );
-
-images/nodo-filtro-pedidos.png
-
 ```
+
+
+![alt text](images/nodo-filtro-pedidos.png)
+
+
 
 ### NODO 4 — notificar estado (HTTP Request)
 Envía un mensaje al cliente informando el nuevo estado de su pedido.
@@ -586,8 +589,8 @@ Envía un mensaje al cliente informando el nuevo estado de su pedido.
   "chat_id": {{ $json.telegram_id }},
   "text": "Tu pedido PED-xxx esta ahora en estado: Preparacion"
 }
-
-images/nodo-notificar-estado.png
+```
+![alt text](images/nodo-notificar-estado.png)
 
 ```
 
@@ -595,7 +598,7 @@ Para cambiar el estado, el administrador edita directamente la columna ESTADO en
 
 ```
 Recibido → Preparacion → En camino → Entregado
-```
+
 
 ![alt text](images/img-cambio-estado.jpeg)
 
@@ -615,12 +618,11 @@ Trigger Interval: Days
 Days Between Triggers: 1
 Trigger at Hour: 8
 ---
-
-images/nodo-schedule-trigger2.png
+```
+![alt text](images/nodo-schedule-trigger2.png)
 
 ---
 
-```
 
 ### NODO 2 — pedidos del dia (Google Sheets)
 Lee todos los pedidos de la hoja PEDIDOS para filtrarlos por fecha.
@@ -629,7 +631,7 @@ Lee todos los pedidos de la hoja PEDIDOS para filtrarlos por fecha.
 Operation: Get Rows
 Sheet: PEDIDOS
 
-images/nodo-pedido-dia.png
+![alt text](images/nodo-pedido-dia.png)
 
 ```
 
@@ -642,10 +644,13 @@ const pedidosHoy = pedidos.filter(p => p.json.FECHA === hoy);
 const total = pedidosHoy.reduce((sum, p) => sum + parseInt(p.json.TOTAL_PAGO), 0);
 // Construye ranking de productos mas vendidos
 const masVendidos = Object.entries(conteo).sort((a, b) => b[1] - a[1]).slice(0, 3);
-
-images/nodo-filtrar-hoy.png
-
 ```
+
+
+![alt text](images/nodo-filtrar-hoy.png)
+
+
+
 
 ### NODO 4 — enviar reporte (HTTP Request)
 Envía el reporte al administrador via Telegram con el resumen del día.
@@ -818,3 +823,5 @@ nuevo_stock = parseInt(stockActual.STOCK) - item.cantidad
 **Cómo lo resolvimos:** Editamos directamente el encabezado en Google Sheets eliminando el espacio invisible.
 
 ---
+## Autor
+**Juan Sebastián Salas**
