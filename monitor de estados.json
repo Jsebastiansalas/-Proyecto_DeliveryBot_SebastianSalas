@@ -1,0 +1,144 @@
+{
+  "name": "monitor de estados",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -368,
+        0
+      ],
+      "id": "981c0aff-aa29-4fbe-a7d0-4c6baa6ee434",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "11v3gegOEXQlnVqUk0oTg82Gw3EHk0W3ofPpYi8ofbUk",
+          "mode": "list",
+          "cachedResultName": "DeliveryBot_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11v3gegOEXQlnVqUk0oTg82Gw3EHk0W3ofPpYi8ofbUk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 700033040,
+          "mode": "list",
+          "cachedResultName": "PEDIDOS",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11v3gegOEXQlnVqUk0oTg82Gw3EHk0W3ofPpYi8ofbUk/edit#gid=700033040"
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "specifyRangeA1",
+              "range": "A:G"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -144,
+        0
+      ],
+      "id": "bd3e8823-aa00-44d7-a240-48de8171af88",
+      "name": "obtener pedidos",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0l1pzQP8xWjFUYsd",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const pedidos = $input.all();\n\nconst activos = pedidos.filter(p => \n  p.json.ESTADO !== 'Entregado' && \n  p.json.ESTADO !== 'Recibido'\n);\n\nif (activos.length === 0) {\n  return [{ json: { sin_cambios: true } }];\n}\n\nreturn activos.map(p => ({\n  json: {\n    id_pedido: p.json.ID_PEDIDO,\n    telegram_id: String(p.json.ID_TELEGRAM),\n    estado: p.json.ESTADO,\n    total: p.json.TOTAL_PAGO\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        112,
+        0
+      ],
+      "id": "8ee60669-986d-4831-94b3-2d75ff1225c2",
+      "name": "filtro de pedidos"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot8664911895:AAGF-2VSLixg-XTpPuqjZsvfDBmrdn7Rbig/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": {{ $json.telegram_id }},\n  \"text\": \"{{ 'Tu pedido ' + $json.id_pedido + ' esta en estado: ' + $json.estado }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        400,
+        0
+      ],
+      "id": "ee5273b8-c5b0-48e4-a2a0-1d2e6f360a65",
+      "name": "notificar estado"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "obtener pedidos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "obtener pedidos": {
+      "main": [
+        [
+          {
+            "node": "filtro de pedidos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filtro de pedidos": {
+      "main": [
+        [
+          {
+            "node": "notificar estado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "18ecb39f-9648-4888-a78b-dd8ade975595",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d4f4f5a9528c6fb6562bc2b171daffa26318cb7f8ecd8b780d7cf4ad13ec9bc0"
+  },
+  "id": "3FzboJtw3UWvQBgH",
+  "tags": []
+}

@@ -43,6 +43,8 @@ El sistema usa **n8n** como motor de automatización, **Telegram** como interfaz
 
 La base de datos vive en Google Sheets y tiene 4 hojas:
 
+[text](https://docs.google.com/spreadsheets/d/11v3gegOEXQlnVqUk0oTg82Gw3EHk0W3ofPpYi8ofbUk/edit?usp=sharing)
+
 ### MENU
 Aquí el administrador gestiona los productos disponibles.
 

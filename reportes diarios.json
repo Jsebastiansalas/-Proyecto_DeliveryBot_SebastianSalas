@@ -1,0 +1,146 @@
+{
+  "name": "reportes diarios",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -368,
+        0
+      ],
+      "id": "a2099f5a-9a5f-4b17-9924-43fb0c89cdc7",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const pedidos = $input.all();\nconst hoy = new Date().toLocaleDateString('es-CO');\n\nconst pedidosHoy = pedidos.filter(p => p.json.FECHA === hoy);\n\nif (pedidosHoy.length === 0) {\n  return [{ json: { mensaje: 'No hubo pedidos hoy.' } }];\n}\n\nconst total = pedidosHoy.reduce((sum, p) => sum + parseInt(p.json.TOTAL_PAGO), 0);\n\n// Productos más vendidos\nconst conteo = {};\npedidosHoy.forEach(p => {\n  try {\n    const detalles = JSON.parse(p.json.DETALLES_PEDIDO);\n    detalles.forEach(item => {\n      const nombre = item.NOMBRE || item.nombre;\n      conteo[nombre] = (conteo[nombre] || 0) + (item.cantidad || 1);\n    });\n  } catch(e) {}\n});\n\nconst masVendidos = Object.entries(conteo)\n  .sort((a, b) => b[1] - a[1])\n  .slice(0, 3)\n  .map(([nombre, cant]) => nombre + ': ' + cant + ' unidades')\n  .join('\\n');\n\nreturn [{\n  json: {\n    total_pedidos: pedidosHoy.length,\n    total_ventas: total,\n    mas_vendidos: masVendidos,\n    mensaje: 'Reporte del dia:\\n\\nPedidos: ' + pedidosHoy.length + '\\nVentas totales: $' + total.toLocaleString() + '\\n\\nProductos mas vendidos:\\n' + masVendidos\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        64,
+        0
+      ],
+      "id": "6e524378-f247-4a08-b9e1-6cd780677897",
+      "name": "filtrar hoy"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "11v3gegOEXQlnVqUk0oTg82Gw3EHk0W3ofPpYi8ofbUk",
+          "mode": "list",
+          "cachedResultName": "DeliveryBot_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11v3gegOEXQlnVqUk0oTg82Gw3EHk0W3ofPpYi8ofbUk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 700033040,
+          "mode": "list",
+          "cachedResultName": "PEDIDOS",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11v3gegOEXQlnVqUk0oTg82Gw3EHk0W3ofPpYi8ofbUk/edit#gid=700033040"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -176,
+        0
+      ],
+      "id": "cd21f341-be80-4176-a3a0-04c7569765c4",
+      "name": "pedidos del dia",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0l1pzQP8xWjFUYsd",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot8965161044:AAEi00IJ4IuW0htDzFz7J6VsW3ZI_cS6ZPQ/sendMessage",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "6786663996"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.mensaje }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        272,
+        0
+      ],
+      "id": "dde0f771-83ed-4ede-9219-8f2b38ae6de0",
+      "name": "enviar reporte"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "pedidos del dia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "pedidos del dia": {
+      "main": [
+        [
+          {
+            "node": "filtrar hoy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filtrar hoy": {
+      "main": [
+        [
+          {
+            "node": "enviar reporte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "45e25221-b3bd-4c8d-9667-ea7b14759aa7",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d4f4f5a9528c6fb6562bc2b171daffa26318cb7f8ecd8b780d7cf4ad13ec9bc0"
+  },
+  "id": "LHsljjjc0zeoUL9U",
+  "tags": []
+}
