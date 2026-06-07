@@ -43,7 +43,7 @@ El sistema usa **n8n** como motor de automatización, **Telegram** como interfaz
 
 La base de datos vive en Google Sheets y tiene 4 hojas:
 
-[text](https://docs.google.com/spreadsheets/d/11v3gegOEXQlnVqUk0oTg82Gw3EHk0W3ofPpYi8ofbUk/edit?usp=sharing)
+[link-google-sheets](https://docs.google.com/spreadsheets/d/11v3gegOEXQlnVqUk0oTg82Gw3EHk0W3ofPpYi8ofbUk/edit?usp=sharing)
 
 ### MENU
 Aquí el administrador gestiona los productos disponibles.
@@ -72,7 +72,7 @@ Guarda el estado de la conversación de cada usuario en tiempo real.
 El sistema tiene 3 workflows en n8n:
 
 ```
-DeliveryBot — Flujo Principal     →  Maneja toda la conversación y pedidos (38 nodos)
+DeliveryBot — Flujo Principal     →  Maneja toda la conversación y pedidos (34 nodos)
 DeliveryBot — Monitor de Estados  →  Detecta cambios de estado en Sheets y notifica (4 nodos)
 DeliveryBot — Reportes Diarios    →  Genera métricas de ventas cada mañana (4 nodos)
 ```
