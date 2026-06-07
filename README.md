@@ -538,3 +538,128 @@ POST https://api.telegram.org/bot{TOKEN}/sendMessage
 
 ---
 
+## Monitor de Estados — Los 4 nodos explicados
+
+Este workflow corre de forma independiente cada minuto. Cuando el administrador cambia el estado de un pedido en la hoja PEDIDOS, el bot le notifica automáticamente al cliente.
+
+![alt text](images/workflow-monitor-estados.png)
+
+### NODO 1 — Schedule Trigger
+Se activa automáticamente cada 1 minuto sin necesidad de intervención.
+
+```
+Trigger Interval: Minutes
+Minutes Between Triggers: 1
+
+![alt text](images/nodo-schedule-trigger.png)
+
+```
+
+### NODO 2 — obtener todos los pedidos (Google Sheets)
+Lee todos los pedidos de la hoja PEDIDOS sin filtros para revisarlos todos.
+
+```
+Operation: Get Rows
+Sheet: PEDIDOS
+
+images/nodo-obtener-pedidos-monitor-estados.png
+
+```
+
+### NODO 3 — filtro de pedidos (Code)
+Filtra solo los pedidos que están en estados intermedios — ni Recibido ni Entregado. Estos son los que necesitan notificación al cliente.
+
+```javascript
+const activos = pedidos.filter(p => 
+  p.json.ESTADO !== 'Entregado' && p.json.ESTADO !== 'Recibido'
+);
+
+images/nodo-filtro-pedidos.png
+
+```
+
+### NODO 4 — notificar estado (HTTP Request)
+Envía un mensaje al cliente informando el nuevo estado de su pedido.
+
+```json
+{
+  "chat_id": {{ $json.telegram_id }},
+  "text": "Tu pedido PED-xxx esta ahora en estado: Preparacion"
+}
+
+images/nodo-notificar-estado.png
+
+```
+
+Para cambiar el estado, el administrador edita directamente la columna ESTADO en Google Sheets:
+
+```
+Recibido → Preparacion → En camino → Entregado
+```
+
+![alt text](images/img-cambio-estado.jpeg)
+
+---
+
+## Reportes Diarios — Los 4 nodos explicados
+
+Este workflow genera automáticamente un reporte de ventas cada día a las 8am y lo envía al administrador por Telegram.
+
+![alt text](images/workflow-reportes-diarios.png)
+
+## NODO 1 — Schedule Trigger
+Se activa todos los días a las 8am automáticamente.
+
+```
+Trigger Interval: Days
+Days Between Triggers: 1
+Trigger at Hour: 8
+---
+
+images/nodo-schedule-trigger2.png
+
+---
+
+```
+
+### NODO 2 — pedidos del dia (Google Sheets)
+Lee todos los pedidos de la hoja PEDIDOS para filtrarlos por fecha.
+
+```
+Operation: Get Rows
+Sheet: PEDIDOS
+
+images/nodo-pedido-dia.png
+
+```
+
+### NODO 3 — filtrar hoy (Code)
+Filtra solo los pedidos del día actual, calcula el total de ventas y genera el ranking de productos más vendidos.
+
+```javascript
+const hoy = new Date().toLocaleDateString('es-CO');
+const pedidosHoy = pedidos.filter(p => p.json.FECHA === hoy);
+const total = pedidosHoy.reduce((sum, p) => sum + parseInt(p.json.TOTAL_PAGO), 0);
+// Construye ranking de productos mas vendidos
+const masVendidos = Object.entries(conteo).sort((a, b) => b[1] - a[1]).slice(0, 3);
+
+images/nodo-filtrar-hoy.png
+
+```
+
+### NODO 4 — enviar reporte (HTTP Request)
+Envía el reporte al administrador via Telegram con el resumen del día.
+
+```
+Reporte del dia:
+Pedidos: 12
+Ventas totales: $185.000
+
+Productos mas vendidos:
+Cafe Americano: 8 unidades
+Empanada de Pollo: 6 unidades
+Jugo de Naranja: 4 unidades
+```
+
+![alt text](images/nodo-enviar-reporte.png)
+![alt text](images/img-reportes-diarios.jpeg)
