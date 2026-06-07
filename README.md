@@ -79,7 +79,7 @@ DeliveryBot — Reportes Diarios    →  Genera métricas de ventas cada mañana
 
 ---
 
-## Flujo Principal — Los 38 nodos explicados
+## Flujo Principal — Los 34 nodos explicados
 
 ![alt text](images/workflow-principal.png)
 
@@ -663,3 +663,158 @@ Jugo de Naranja: 4 unidades
 
 ![alt text](images/nodo-enviar-reporte.png)
 ![alt text](images/img-reportes-diarios.jpeg)
+
+---
+
+## Sistema de Puntos e IVA
+
+### Cálculo del total
+
+```
+Subtotal      = suma de todos los productos del carrito
+Descuento     = subtotal × (floor(puntos / 100) × 10%)  →  solo si puntos >= 100
+Base gravable = subtotal - descuento
+IVA (19%)     = base gravable × 0.19
+Total a pagar = base gravable + IVA
+Puntos ganados = floor(total / 1000)
+```
+
+### Ejemplo práctico
+
+```
+Productos:       Café x2 ($7.000) + Empanada x1 ($2.500) = $9.500
+Puntos usuario:  200 puntos → descuento 20%
+Descuento:       -$1.900
+Base gravable:   $7.600
+IVA 19%:         $1.444
+Total a pagar:   $9.044
+Puntos ganados:  9 puntos
+```
+
+---
+
+## Errores que encontramos y cómo los resolvimos
+
+Durante el desarrollo el proyecto tuvo bastantes tropiezos. Aquí están los más importantes:
+
+---
+
+### ❌ Error 1 — "Bad webhook: HTTPS URL must be provided"
+
+**Qué pasó:** Telegram no acepta webhooks en localhost. Solo acepta URLs con HTTPS público, y n8n local no tiene eso por defecto.
+
+**Cómo lo resolvimos:** Primero usamos ngrok para exponer el servidor local con una URL pública. Después migramos a n8n Cloud que ya incluye HTTPS sin ninguna configuración adicional.
+
+```bash
+ngrok http 5678
+# Resultado: https://justifier-clone-skillful.ngrok-free.dev -> localhost:5678
+```
+
+> 📸 **[PANTALLAZO: Terminal con ngrok corriendo y URL pública]**
+
+---
+
+### ❌ Error 2 — La variable N8N_WEBHOOK_URL no funcionaba en Windows
+
+**Qué pasó:** Por más que configurábamos la variable de entorno en Windows con `set` o `setx`, n8n seguía mostrando localhost en el Webhook URL del nodo.
+
+**Cómo lo resolvimos:** Registramos el webhook directamente en Telegram usando su API via curl, apuntando manualmente a la URL de ngrok.
+
+```bash
+curl -X POST "https://api.telegram.org/bot{TOKEN}/setWebhook" \
+  -H "Content-Type: application/json" \
+  -d "{\"url\":\"https://justifier-clone-skillful.ngrok-free.dev/webhook/deliverybot\"}"
+# Respuesta: {"ok":true,"result":true,"description":"Webhook was set"}
+```
+
+---
+
+### ❌ Error 3 — Google Sheets con ID vacío al importar el workflow
+
+**Qué pasó:** Al importar el JSON del workflow, los nodos de Google Sheets quedaban sin el ID del documento configurado y lanzaban el error "Cannot get sheet By ID with a value of empty".
+
+**Cómo lo resolvimos:** Reconfiguramos manualmente cada nodo de Google Sheets seleccionando el documento DeliveryBot_DB desde la lista desplegable y verificando que todas las hojas estuvieran correctamente referenciadas.
+
+> 📸 **[PANTALLAZO: Configuración correcta de un nodo Google Sheets con documento seleccionado]**
+
+---
+
+### ❌ Error 4 — "Cannot read properties of undefined (telegram_id)"
+
+**Qué pasó:** El filtro del nodo obtener sesion usaba `$json.message.from.id` que no existe cuando el mensaje es un clic en un botón (callback_query). Los dos tipos de mensaje tienen estructuras diferentes.
+
+**Cómo lo resolvimos:** Usamos el operador OR con optional chaining para manejar ambos casos en el mismo filtro:
+
+```javascript
+={{ $json.message?.from?.id || $json.callback_query?.from?.id }}
+```
+
+---
+
+### ❌ Error 5 — Los botones del menú no hacían nada
+
+**Qué pasó:** Al hacer clic en los botones inline, el bot no respondía. El Telegram Trigger solo estaba configurado para escuchar mensajes de texto, no callback_query.
+
+**Cómo lo resolvimos:** Agregamos "Callback Query" en el campo Trigger On del nodo Telegram Trigger.
+
+> 📸 **[PANTALLAZO: Trigger On con Message y Callback Query activados]**
+
+---
+
+### ❌ Error 6 — El reply_markup no mostraba botones en Telegram
+
+**Qué pasó:** El nodo nativo de Telegram en n8n no aceptaba el JSON del inline_keyboard como un string. Los botones nunca aparecían en los mensajes.
+
+**Cómo lo resolvimos:** Reemplazamos el nodo Telegram por un nodo HTTP Request que llama directamente a la API de Telegram, lo que nos da control total sobre el body del request y permite enviar el reply_markup correctamente.
+
+> 📸 **[PANTALLAZO: Configuración del nodo HTTP Request para enviar mensajes con botones]**
+
+---
+
+### ❌ Error 7 — El carrito no acumulaba productos
+
+**Qué pasó:** Al agregar un segundo producto, el carrito solo mostraba el último porque el nodo guardar sesion no retornaba el mensaje ni el telegram_id al siguiente nodo, perdiendo el contexto.
+
+**Cómo lo resolvimos:** Conectamos agregar al carrito con dos salidas: una directa a unificar respuestas para el mensaje, y otra a guardar sesion para persistir el carrito. De esta manera los datos del mensaje no pasan por Google Sheets y no se pierden.
+
+---
+
+### ❌ Error 8 — El ID del producto se perdía al escribir la cantidad
+
+**Qué pasó:** Al implementar la selección de cantidad por texto, el ID del producto se perdía entre mensajes. El resultado era `add__3` (con ID vacío) y el sistema respondía "Producto no encontrado".
+
+**Cómo lo resolvimos:** Guardamos el ID del producto en la columna ULTIMO_CAPITULO de SESSIONS cuando el bot pregunta la cantidad, y lo recuperamos desde ahí cuando el usuario escribe el número.
+
+```javascript
+// Al preguntar cantidad → guardar en SESSIONS:
+ULTIMO_CAPITULO = id_producto
+PANTALLA_ACTUAL = esperando_cantidad
+
+// Al procesar la cantidad escrita:
+const id_producto = ctx.ULTIMO_CAPITULO || '';
+texto = 'add_' + id_producto + '_' + cantidad;
+```
+
+---
+
+### ❌ Error 9 — El stock siempre quedaba en el mismo valor
+
+**Qué pasó:** El nodo descontar stock siempre dejaba el stock igual porque tomaba el valor del primer producto del carrito para todos los demás, ignorando el stock real de cada uno.
+
+**Cómo lo resolvimos:** Agregamos el nodo leer stock antes de descontar stock para obtener el valor actual de cada producto individualmente, y luego calculamos el nuevo stock correctamente.
+
+```javascript
+nuevo_stock = parseInt(stockActual.STOCK) - item.cantidad
+```
+
+> 📸 **[PANTALLAZO: Hoja MENU con stock correcto después del descuento]**
+
+---
+
+### ❌ Error 10 — Espacio invisible en encabezado de Google Sheets
+
+**Qué pasó:** La columna ID_TELEGRAM de la hoja PEDIDOS tenía un espacio en blanco al inicio (" ID_TELEGRAM"), lo que hacía que n8n leyera el campo como undefined y el monitor de estados no podía notificar a nadie.
+
+**Cómo lo resolvimos:** Editamos directamente el encabezado en Google Sheets eliminando el espacio invisible.
+
+---
