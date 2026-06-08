@@ -72,7 +72,7 @@ Guarda el estado de la conversación de cada usuario en tiempo real.
 El sistema tiene 3 workflows en n8n:
 
 ```
-DeliveryBot — Flujo Principal     →  Maneja toda la conversación y pedidos (34 nodos)
+DeliveryBot — Flujo Principal     →  Maneja toda la conversación y pedidos (35 nodos)
 DeliveryBot — Monitor de Estados  →  Detecta cambios de estado en Sheets y notifica (4 nodos)
 DeliveryBot — Reportes Diarios    →  Genera métricas de ventas cada mañana (4 nodos)
 ```
@@ -81,7 +81,7 @@ DeliveryBot — Reportes Diarios    →  Genera métricas de ventas cada mañana
 
 ---
 
-## Flujo Principal — Los 34 nodos explicados
+## Flujo Principal — Los 35 nodos explicados
 
 ![alt text](images/workflow-principal.png)
 
@@ -416,7 +416,26 @@ Filter: ID_TELEGRAM = {{ $json.telegram_id }}
 ![alt text](images/nodo-obtener-pedidos.png)
 
 ---
-### NODO 25 — preguntar cantidad (Code)
+### NODO 25 — mag mis pedidos (Code)
+Toma los pedidos traídos por obtener pedidos y muestra los últimos 7 ordenados por número de fila (los más recientes primero). Si el usuario no tiene pedidos registrados, le avisa con un mensaje amigable.
+```javascript
+const pedidos = $input.all();
+const telegram_id = pedidos[0]?.json?.ID_TELEGRAM?.toString() || '';
+
+// Ordena por row_number descendente para mostrar los mas recientes primero
+const ordenados = pedidos.sort((a, b) => b.json.row_number - a.json.row_number);
+const ultimos = ordenados.slice(0, 7);
+
+let lista = ultimos.map(p => {
+  return p.json.ID_PEDIDO + ' — ' + p.json.ESTADO + ' — $' 
+    + parseInt(p.json.TOTAL_PAGO).toLocaleString() + ' — ' + p.json.FECHA;
+}).join('\n');
+```
+![alt text](images/nodo-msg-mispedidos.png)
+
+---
+
+### NODO 26 — preguntar cantidad (Code)
 Cuando el usuario selecciona un producto, el bot le pregunta cuántas unidades quiere mediante un mensaje de texto. Guarda el ID del producto en la variable id_producto.
 
 ```javascript
@@ -428,7 +447,7 @@ return [{ json: { telegram_id, id_producto, mensaje: 'Cuantas unidades quieres?\
 
 ---
 
-### NODO 26 — procesar cantidad (Code)
+### NODO 27 — procesar cantidad (Code)
 Recibe el número escrito por el usuario, recupera el ID del producto guardado en SESSIONS (ULTIMO_CAPITULO) y construye el callback `add_PRODUCTO_CANTIDAD` para que el Switch lo enrute correctamente.
 
 ```javascript
@@ -440,7 +459,7 @@ return [{ json: { ...ctx, texto: 'add_' + id_producto + '_' + cantidad } }];
 
 ---
 
-### NODO 27 — vaciar carrito (Code)
+### NODO 28 — vaciar carrito (Code)
 Permite al usuario limpiar su carrito manualmente antes de confirmar el pedido.
 
 ```javascript
@@ -450,7 +469,7 @@ return [{ json: { telegram_id, carrito_actualizado: [], mensaje: 'Carrito vaciad
 
 ---
 
-### NODO 28 — guardar producto seleccionado (Google Sheets)
+### NODO 29 — guardar producto seleccionado (Google Sheets)
 Cuando el bot pregunta la cantidad, guarda el ID del producto en la columna ULTIMO_CAPITULO de SESSIONS para no perderlo entre mensajes.
 ```
 Operation: Append or Update Row
@@ -462,7 +481,7 @@ PANTALLA_ACTUAL = esperando_cantidad
 
 ---
 
-### NODO 29 — guardar sesion vaciar (Google Sheets)
+### NODO 30 — guardar sesion vaciar (Google Sheets)
 Persiste el carrito vacío en SESSIONS cuando el usuario elige vaciar el carrito manualmente.
 
 ```
@@ -475,7 +494,7 @@ PANTALLA_ACTUAL = inicio
 
 ---
 
-### NODO 30 — Code in JavaScript (recuperar datos vaciar)
+### NODO 31 — Code in JavaScript (recuperar datos vaciar)
 Recupera el mensaje de confirmación desde el nodo vaciar carrito para enviárselo al usuario después de guardar la sesión.
 
 ```javascript
@@ -486,7 +505,7 @@ return [{ json: { telegram_id: anterior.telegram_id, mensaje: anterior.mensaje, 
 
 ---
 
-### NODO 31 — recuperar preguntar (Code)
+### NODO 32 — recuperar preguntar (Code)
 Recupera el mensaje de preguntar cantidad para enviárselo al usuario después de guardar el producto seleccionado en SESSIONS.
 
 ```javascript
@@ -497,7 +516,7 @@ return [{ json: { telegram_id: anterior.telegram_id, mensaje: anterior.mensaje, 
 
 ---
 
-### NODO 32 — guardar sesion (Google Sheets)
+### NODO 33 — guardar sesion (Google Sheets)
 Persiste el carrito actualizado en SESSIONS cada vez que el usuario agrega un producto.
 
 ```
@@ -509,7 +528,7 @@ CARRITO_TEMPORAL = {{ JSON.stringify($json.carrito_actualizado) }}
 
 ---
 
-### NODO 33 — unificar respuestas (Code)
+### NODO 34 — unificar respuestas (Code)
 Punto de convergencia de todos los flujos. Garantiza que el mensaje, el telegram_id y el reply_markup lleguen correctamente al nodo de envío sin importar por qué rama del flujo se llegó.
 
 ```javascript
@@ -524,7 +543,7 @@ for (const item of items) {
 
 ---
 
-### NODO 34 — HTTP Request (Enviar mensaje)
+### NODO 35 — HTTP Request (Enviar mensaje)
 Envía el mensaje final al usuario via la API oficial de Telegram. Se usa HTTP Request en lugar del nodo nativo de Telegram porque permite enviar el reply_markup como JSON completo.
 
 ```json
