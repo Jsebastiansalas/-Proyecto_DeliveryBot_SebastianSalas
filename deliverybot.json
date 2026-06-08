@@ -297,8 +297,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        496,
-        448
+        544,
+        432
       ],
       "id": "7d72476d-eb77-40c6-99aa-cfc534cac022",
       "name": "msg carrito"
@@ -376,13 +376,13 @@
     },
     {
       "parameters": {
-        "jsCode": "const ctx = $('procesar cantidad').first().json.texto ? $('procesar cantidad').first().json : $('recuperar contexto').first().json;\nconst producto = $input.first().json;\n\nconst partes = ctx.texto.split('_');\nconst cantidad = parseInt(partes[partes.length - 1]) || 1;\n\nif (!producto || !producto.ID_PRODUCTO) {\n  return [{\n    json: {\n      telegram_id: ctx.telegram_id,\n      mensaje: 'Producto no encontrado.',\n      reply_markup: JSON.stringify({\n        inline_keyboard: [[{ text: 'Volver', callback_data: 'ver_menu' }]]\n      })\n    }\n  }];\n}\n\nif (parseInt(producto.STOCK) <= 0) {\n  return [{\n    json: {\n      telegram_id: ctx.telegram_id,\n      mensaje: producto.NOMBRE + ' esta agotado.',\n      reply_markup: JSON.stringify({\n        inline_keyboard: [[{ text: 'Volver al Menu', callback_data: 'ver_menu' }]]\n      })\n    }\n  }];\n}\n\nlet carrito = ctx.carrito || [];\nconst idx = carrito.findIndex(item => item.ID_PRODUCTO === producto.ID_PRODUCTO);\n\nif (idx >= 0) {\n  carrito[idx].cantidad += cantidad;\n  carrito[idx].subtotal = carrito[idx].cantidad * parseFloat(producto.PRECIO);\n} else {\n  carrito.push({\n    ID_PRODUCTO: producto.ID_PRODUCTO,\n    NOMBRE: producto.NOMBRE,\n    PRECIO: parseFloat(producto.PRECIO),\n    cantidad: cantidad,\n    subtotal: parseFloat(producto.PRECIO) * cantidad\n  });\n}\n\nconst total = carrito.reduce((sum, item) => sum + item.subtotal, 0);\n\nreturn [{\n  json: {\n    telegram_id: ctx.telegram_id,\n    carrito_actualizado: carrito,\n    mensaje: cantidad + ' x ' + producto.NOMBRE + ' agregado al carrito.\\n\\nTotal: $' + total.toLocaleString(),\n    reply_markup: JSON.stringify({\n      inline_keyboard: [\n        [{ text: 'Ver Carrito', callback_data: 'ver_carrito' }],\n        [{ text: 'Seguir Comprando', callback_data: 'ver_menu' }]\n      ]\n    })\n  }\n}];\n"
+        "jsCode": "let ctx;\ntry {\n  ctx = $('procesar cantidad').first().json.texto ? $('procesar cantidad').first().json : $('recuperar contexto').first().json;\n} catch(e) {\n  ctx = $('recuperar contexto').first().json;\n}\nconst producto = $input.first().json;\n\nconst partes = ctx.texto.split('_');\nconst cantidad = parseInt(partes[partes.length - 1]) || 1;\n\nif (!producto || !producto.ID_PRODUCTO) {\n  return [{\n    json: {\n      telegram_id: ctx.telegram_id,\n      mensaje: 'Producto no encontrado.',\n      reply_markup: JSON.stringify({\n        inline_keyboard: [[{ text: 'Volver', callback_data: 'ver_menu' }]]\n      })\n    }\n  }];\n}\n\nif (parseInt(producto.STOCK) <= 0) {\n  return [{\n    json: {\n      telegram_id: ctx.telegram_id,\n      mensaje: producto.NOMBRE + ' esta agotado.',\n      reply_markup: JSON.stringify({\n        inline_keyboard: [[{ text: 'Volver al Menu', callback_data: 'ver_menu' }]]\n      })\n    }\n  }];\n}\n\nlet carrito = ctx.carrito || [];\nconst idx = carrito.findIndex(item => item.ID_PRODUCTO === producto.ID_PRODUCTO);\n\nif (idx >= 0) {\n  carrito[idx].cantidad += cantidad;\n  carrito[idx].subtotal = carrito[idx].cantidad * parseFloat(producto.PRECIO);\n} else {\n  carrito.push({\n    ID_PRODUCTO: producto.ID_PRODUCTO,\n    NOMBRE: producto.NOMBRE,\n    PRECIO: parseFloat(producto.PRECIO),\n    cantidad: cantidad,\n    subtotal: parseFloat(producto.PRECIO) * cantidad\n  });\n}\n\nconst total = carrito.reduce((sum, item) => sum + item.subtotal, 0);\n\nreturn [{\n  json: {\n    telegram_id: ctx.telegram_id,\n    carrito_actualizado: carrito,\n    mensaje: cantidad + ' x ' + producto.NOMBRE + ' agregado al carrito.\\n\\nTotal: $' + total.toLocaleString(),\n    reply_markup: JSON.stringify({\n      inline_keyboard: [\n        [{ text: 'Ver Carrito', callback_data: 'ver_carrito' }],\n        [{ text: 'Seguir Comprando', callback_data: 'ver_menu' }]\n      ]\n    })\n  }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1376,
-        416
+        1392,
+        432
       ],
       "id": "f7fc24f6-6ac4-44bb-a661-1ce7376c8b37",
       "name": "agregar carrito"
@@ -494,16 +494,16 @@
         },
         "sheetName": {
           "__rl": true,
-          "value": "gid=0",
+          "value": 700033040,
           "mode": "list",
-          "cachedResultName": "MENU",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11v3gegOEXQlnVqUk0oTg82Gw3EHk0W3ofPpYi8ofbUk/edit#gid=0"
+          "cachedResultName": "PEDIDOS",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11v3gegOEXQlnVqUk0oTg82Gw3EHk0W3ofPpYi8ofbUk/edit#gid=700033040"
         },
         "filtersUI": {
           "values": [
             {
-              "lookupColumn": "ID_PRODUCTO",
-              "lookupValue": "={{ $json.texto.split('_')[1] }}"
+              "lookupColumn": "ID_TELEGRAM",
+              "lookupValue": "={{ $json.telegram_id }}"
             }
           ]
         },
@@ -512,11 +512,12 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        624,
-        672
+        560,
+        688
       ],
       "id": "7e2ca8f7-8509-4793-b01e-9903c38eeddc",
       "name": "obtener pedidos",
+      "alwaysOutputData": true,
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "0l1pzQP8xWjFUYsd",
@@ -818,7 +819,8 @@
             "TOTAL_PAGO": "={{ $json.total }}",
             "ESTADO": "Recibido",
             "FECHA": "={{ $json.fecha }}",
-            "HORA": "={{ $json.hora }}"
+            "HORA": "={{ $json.hora }}",
+            "ID_TELEGRAM": "={{ $json.telegram_id }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -987,7 +989,7 @@
       "typeVersion": 2,
       "position": [
         1136,
-        624
+        640
       ],
       "id": "13b046f9-ea24-4bbe-b0ff-e20ccf3ec8a7",
       "name": "extraer items pedidos"
@@ -1508,7 +1510,9 @@
           "mappingMode": "defineBelow",
           "value": {
             "ID_TELEGRAM": "={{ $json.telegram_id }}",
-            "PUNTOS_LEALTAD": "={{ $('procesar pedido').first().json.puntos_actuales + $('procesar pedido').first().json.puntos_ganados }}"
+            "PUNTOS_LEALTAD": "={{ $('procesar pedido').first().json.puntos_actuales + $('procesar pedido').first().json.puntos_ganados }}",
+            "NOMBRE_COMPLETO": "={{ $('recuperar contexto').first().json.nombre }}",
+            "DEPARTAMENTO": "Santander"
           },
           "matchingColumns": [
             "ID_TELEGRAM"
@@ -1571,6 +1575,19 @@
           "name": "Google Sheets OAuth2 API"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "const pedidos = $input.all();\nconst telegram_id = pedidos[0]?.json?.ID_TELEGRAM?.toString() || '';\n\nif (!pedidos || pedidos.length === 0 || !pedidos[0].json.ID_PEDIDO) {\n  return [{\n    json: {\n      telegram_id,\n      mensaje: 'No tienes pedidos registrados aun.',\n      reply_markup: JSON.stringify({\n        inline_keyboard: [\n          [{ text: 'Hacer un Pedido', callback_data: 'ver_menu' }],\n          [{ text: 'Inicio', callback_data: '/start' }]\n        ]\n      })\n    }\n  }];\n}\n\nconst ordenados = pedidos.sort((a, b) => b.json.row_number - a.json.row_number);\nconst ultimos = ordenados.slice(0, 7);\n\nlet lista = ultimos.map(p => {\n  return p.json.ID_PEDIDO + ' — ' + p.json.ESTADO + ' — $' + parseInt(p.json.TOTAL_PAGO).toLocaleString() + ' — ' + p.json.FECHA;\n}).join('\\n');\n\nreturn [{\n  json: {\n    telegram_id,\n    mensaje: 'Tus ultimos pedidos:\\n\\n' + lista,\n    reply_markup: JSON.stringify({\n      inline_keyboard: [\n        [{ text: 'Nuevo Pedido', callback_data: 'ver_menu' }],\n        [{ text: 'Inicio', callback_data: '/start' }]\n      ]\n    })\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        560
+      ],
+      "id": "819e3db7-ef17-40f5-9049-2ff23f009ea1",
+      "name": "msg mis pedidos"
     }
   ],
   "pinData": {},
@@ -1740,7 +1757,7 @@
       "main": [
         [
           {
-            "node": "agregar carrito",
+            "node": "msg mis pedidos",
             "type": "main",
             "index": 0
           }
@@ -2043,6 +2060,17 @@
           }
         ]
       ]
+    },
+    "msg mis pedidos": {
+      "main": [
+        [
+          {
+            "node": "unificar respuestas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
@@ -2050,7 +2078,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "b02bafdd-05b0-4a11-b353-1df32738756d",
+  "versionId": "d218c073-1cd1-4cd9-9a8e-75fb6a6c55f6",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "d4f4f5a9528c6fb6562bc2b171daffa26318cb7f8ecd8b780d7cf4ad13ec9bc0"
